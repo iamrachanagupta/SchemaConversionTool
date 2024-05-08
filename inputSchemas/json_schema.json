@@ -1,0 +1,29 @@
+{
+  "schema":"http://json-schema.org/draft-07/schema#",
+  "type":"object",
+  "properties":{
+    "type":{
+      "type":"string"
+    },
+    "id":{
+      "type":"string"
+    },
+    "customerId":{
+      "type":"string"
+    },
+    "createdAt":{
+      "type":"string"
+    },
+    "updatedAt":{
+      "type":"string"
+    },
+    "name":{
+      "type":"string"
+    },
+    "associationCount":{
+      "type":"integer",
+      "minimum":0
+    }
+  },
+  "required":["type","id","customerId","createdAt","updatedAt","name"]
+}
