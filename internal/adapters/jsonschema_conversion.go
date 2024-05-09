@@ -1,6 +1,6 @@
 // (C) Copyright 2023-2024 Hewlett Packard Enterprise Development LP
 
-package domain
+package adapters
 
 import "fmt"
 
