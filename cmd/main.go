@@ -14,6 +14,7 @@ import (
 
 // SchemaResponse holds both the original JSON schema and the converted Spark schema
 type SchemaResponse struct {
+	SchemaType     string      `json:"Schema_type"`
 	OriginalSchema interface{} `json:"original_schema"`
 	SparkSchema    interface{} `json:"spark_schema"`
 }
@@ -43,8 +44,8 @@ func getSchemaFromPath(path string) ([]byte, error) {
 
 func main() {
 
-	http.HandleFunc("/json_to_spark", jsonsparkSchemaHandler)
-	http.HandleFunc("/xml_to_spark", xmlSparkSchemaHandler)
+	http.HandleFunc("/spark-schema/json", sparkSchemaHandler)
+	http.HandleFunc("/spark-schema/xml", sparkSchemaHandler)
 	http.Handle("/", http.FileServer(http.Dir("."))) // Serve static files (like the HTML file)
 
 	fmt.Println("Server running on http://localhost:8080")
@@ -52,29 +53,26 @@ func main() {
 
 }
 
-// Handler for Spark schema endpoint
-func jsonsparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
-	schemaBytes, err := getSchemaFromPath("inputSchemas/json_schema.json")
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-	var schema map[string]interface{}
+func sparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
+	//var schema map[string]interface{}
+	var response SchemaResponse
+	var err error
+	// Check the URL path to determine the requested format
+	switch r.URL.Path {
+	case "/spark-schema/json":
+		SchemaType := "JSON"
+		path := "inputSchemas/json_schema.json"
+		response, err = ConvertInputSchemaToSparkSchema(SchemaType, path)
 
-	// Unmarshal JSON data into the map
-	err = json.Unmarshal(schemaBytes, &schema)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
+	case "/spark-schema/xml":
+		SchemaType := "XML"
+		path := "inputSchemas/xml_schema.xml"
+		response, err = ConvertInputSchemaToSparkSchema(SchemaType, path)
+
+	default:
+		http.Error(w, "Unsupported format", http.StatusNotFound)
 	}
 
-	// Simulated Spark schema data
-	sparkSchema, _ := domain.ConvertJSONSchemaToSparkSchema(schema)
-	// Create a response struct
-	response := SchemaResponse{
-		OriginalSchema: schema,
-		SparkSchema:    sparkSchema,
-	}
 	//	// Marshal the schema to JSON with indentation
 	//	schemaJSON, err := json.MarshalIndent(response, "", "    ")
 	//	if err != nil {
@@ -124,7 +122,11 @@ func jsonsparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
     <div class="container">
         <div class="schema">
             <h2>Original Schema</h2>
+			{{ if eq .SchemaType "JSON" }}
             <pre>{{ toJSON .OriginalSchema }}</pre>
+			{{ else }}
+			<pre>{{ .OriginalSchema }}</pre>
+			{{ end }}
         </div>
         <div class="schema">
             <h2>Spark Schema</h2>
@@ -147,93 +149,221 @@ func jsonsparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Handler for Spark schema endpoint
-func xmlSparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
-	originalSchema, schemaBytes := convertXMLToJSON()
-	var schema map[string]interface{}
-
-	// Unmarshal JSON data into the map
-	err := json.Unmarshal(schemaBytes, &schema)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-	// Simulated Spark schema data
-	sparkSchema, _ := domain.ConvertJSONSchemaToSparkSchema(schema["root"].(map[string]interface{}))
-	// Create a response struct
-	response := SchemaResponse{
-		OriginalSchema: string(originalSchema),
-		SparkSchema:    sparkSchema,
-	}
-	// Load HTML template
-	tmpl, err := template.New("schema").Funcs(template.FuncMap{
-		"toJSON": func(v interface{}) (string, error) {
-			jsonData, err := json.MarshalIndent(v, "", "    ")
-			if err != nil {
-				return "", err
-			}
-			return string(jsonData), nil
-		},
-	}).Parse(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schema Conversion</title>
-    <style>
-        .container {
-            display: flex;
-        }
-        .schema {
-            flex: 1;
-            margin: 10px;
-            border: 1px solid #ccc;
-            padding: 10px;
-            overflow: auto;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="schema">
-            <h2>Original Schema</h2>
-            <pre>{{ .OriginalSchema }}</pre>
-        </div>
-        <div class="schema">
-            <h2>Spark Schema</h2>
-            <pre>{{ toJSON .SparkSchema }}</pre>
-        </div>
-    </div>
-</body>
-</html>
-`)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Execute the template with the response data
-	err = tmpl.Execute(w, response)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func convertXMLToJSON() ([]byte, []byte) {
-
-	// Read XML content
-	xmlData, err := os.ReadFile("inputSchemas/xml_schema.xml")
+func ConvertInputSchemaToSparkSchema(SchemaType, path string) (SchemaResponse, error) {
+	var schema, sparkSchema map[string]interface{}
+	var originalSchema interface{}
+	var response SchemaResponse
+	originalSchemaBytes, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Println("Error reading XML file:", err)
-		return nil, nil
+		return SchemaResponse{}, err
 	}
-	xml := strings.NewReader(string(xmlData))
 
-	jsonBytes, err := xj.Convert(xml)
-	if err != nil {
-		return xmlData, nil
+	if SchemaType == "XML" {
+		xml := strings.NewReader(string(originalSchemaBytes))
+
+		jsonBuff, err := xj.Convert(xml)
+		if err != nil {
+			return SchemaResponse{}, err
+		}
+		originalSchema = string(originalSchemaBytes)
+		originalSchemaBytes = jsonBuff.Bytes()
 	}
-	return xmlData, jsonBytes.Bytes()
+	// Unmarshal JSON data into the map
+	err = json.Unmarshal(originalSchemaBytes, &schema)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return SchemaResponse{}, err
+	}
+
+	if SchemaType == "XML" {
+		schema = schema["root"].(map[string]interface{})
+	} else {
+		originalSchema = schema
+	}
+
+	// Simulated Spark schema data
+	sparkSchema, err = domain.ConvertJSONSchemaToSparkSchema(schema)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return SchemaResponse{}, err
+	}
+
+	// Create a response struct
+	response = SchemaResponse{
+		SchemaType:     SchemaType,
+		OriginalSchema: originalSchema,
+		SparkSchema:    sparkSchema,
+	}
+	return response, err
+
 }
+
+//// Handler for Spark schema endpoint
+//func jsonsparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
+//	schemaBytes, err := getSchemaFromPath("inputSchemas/json_schema.json")
+//	if err != nil {
+//		fmt.Println("Error:", err)
+//		return
+//	}
+//	var schema map[string]interface{}
+//
+//	// Unmarshal JSON data into the map
+//	err = json.Unmarshal(schemaBytes, &schema)
+//	if err != nil {
+//		fmt.Println("Error:", err)
+//		return
+//	}
+//
+//	// Simulated Spark schema data
+//	sparkSchema, _ := domain.ConvertJSONSchemaToSparkSchema(schema)
+//	// Create a response struct
+//	response := SchemaResponse{
+//		OriginalSchema: schema,
+//		SparkSchema:    sparkSchema,
+//	}
+//	//	// Marshal the schema to JSON with indentation
+//	//	schemaJSON, err := json.MarshalIndent(response, "", "    ")
+//	//	if err != nil {
+//	//		fmt.Println("Error marshaling schema to JSON:", err)
+//	//		return
+//	//	}
+//	//
+//	//	// Print the pretty formatted JSON schema
+//	//	//fmt.Println(string(schemaJSON))
+//	//	// Set the content type header
+//	//	w.Header().Set("Content-Type", "application/json")
+//	//	// Write the Spark schema JSON response
+//	//	w.Write(schemaJSON)
+//	//
+//	//}
+//
+//	// Load HTML template
+//	tmpl, err := template.New("schema").Funcs(template.FuncMap{
+//		"toJSON": func(v interface{}) (string, error) {
+//			jsonData, err := json.MarshalIndent(v, "", "    ")
+//			if err != nil {
+//				return "", err
+//			}
+//			return string(jsonData), nil
+//		},
+//	}).Parse(`
+//<!DOCTYPE html>
+//<html lang="en">
+//<head>
+//    <meta charset="UTF-8">
+//    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//    <title>Schema Conversion</title>
+//    <style>
+//        .container {
+//            display: flex;
+//        }
+//        .schema {
+//            flex: 1;
+//            margin: 10px;
+//            border: 1px solid #ccc;
+//            padding: 10px;
+//            overflow: auto;
+//        }
+//    </style>
+//</head>
+//<body>
+//    <div class="container">
+//        <div class="schema">
+//            <h2>Original Schema</h2>
+//            <pre>{{ toJSON .OriginalSchema }}</pre>
+//        </div>
+//        <div class="schema">
+//            <h2>Spark Schema</h2>
+//            <pre>{{ toJSON .SparkSchema }}</pre>
+//        </div>
+//    </div>
+//</body>
+//</html>
+//`)
+//	if err != nil {
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	// Execute the template with the response data
+//	err = tmpl.Execute(w, response)
+//	if err != nil {
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//}
+//
+//// Handler for Spark schema endpoint
+//func xmlSparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
+//	originalSchema, schemaBytes := convertXMLToJSON()
+//	var schema map[string]interface{}
+//
+//	// Unmarshal JSON data into the map
+//	err := json.Unmarshal(schemaBytes, &schema)
+//	if err != nil {
+//		fmt.Println("Error:", err)
+//		return
+//	}
+//	// Simulated Spark schema data
+//	sparkSchema, _ := domain.ConvertJSONSchemaToSparkSchema(schema["root"].(map[string]interface{}))
+//	// Create a response struct
+//	response := SchemaResponse{
+//		OriginalSchema: string(originalSchema),
+//		SparkSchema:    sparkSchema,
+//	}
+//	// Load HTML template
+//	tmpl, err := template.New("schema").Funcs(template.FuncMap{
+//		"toJSON": func(v interface{}) (string, error) {
+//			jsonData, err := json.MarshalIndent(v, "", "    ")
+//			if err != nil {
+//				return "", err
+//			}
+//			return string(jsonData), nil
+//		},
+//	}).Parse(`
+//<!DOCTYPE html>
+//<html lang="en">
+//<head>
+//    <meta charset="UTF-8">
+//    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//    <title>Schema Conversion</title>
+//    <style>
+//        .container {
+//            display: flex;
+//        }
+//        .schema {
+//            flex: 1;
+//            margin: 10px;
+//            border: 1px solid #ccc;
+//            padding: 10px;
+//            overflow: auto;
+//        }
+//    </style>
+//</head>
+//<body>
+//    <div class="container">
+//        <div class="schema">
+//            <h2>Original Schema</h2>
+//            <pre>{{ .OriginalSchema }}</pre>
+//        </div>
+//        <div class="schema">
+//            <h2>Spark Schema</h2>
+//            <pre>{{ toJSON .SparkSchema }}</pre>
+//        </div>
+//    </div>
+//</body>
+//</html>
+//`)
+//	if err != nil {
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	// Execute the template with the response data
+//	err = tmpl.Execute(w, response)
+//	if err != nil {
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//}
