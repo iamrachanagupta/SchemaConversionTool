@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<root>
+    <schema>http://json-schema.org/draft-07/schema#</schema>
+    <type>object</type>
+    <properties>
+        <type>
+            <type>string</type>
+        </type>
+        <id>
+            <type>string</type>
+        </id>
+        <customerId>
+            <type>string</type>
+        </customerId>
+        <createdAt>
+            <type>string</type>
+        </createdAt>
+        <updatedAt>
+            <type>string</type>
+        </updatedAt>
+        <name>
+            <type>string</type>
+        </name>
+        <associationCount>
+            <type>integer</type>
+            <minimum>0</minimum>
+            <maximum>30</maximum>
+        </associationCount>
+    </properties>
+    <required>type</required>
+    <required>id</required>
+    <required>customerId</required>
+    <required>createdAt</required>
+    <required>updatedAt</required>
+    <required>name</required>
+</root>
