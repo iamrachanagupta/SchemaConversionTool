@@ -11,11 +11,20 @@ func main() {
 
 	http.HandleFunc("/spark-schema/json", domain.SparkSchemaHandler)
 	http.HandleFunc("/spark-schema/xml", domain.SparkSchemaHandler)
+	http.HandleFunc("/spark-schema/proto", domain.SparkSchemaHandler)
 	http.Handle("/", http.FileServer(http.Dir("."))) // Serve static files (like the HTML file)
-
 	fmt.Println("Server running on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
+
+//func convertproto() {
+//	cmd := exec.Command("protoc", "--jsonschema_out=./inputSchemas/generatedByProto/",
+//		"--proto_path=inputSchemas/", "inputSchemas/proto_schema.proto")
+//	err := cmd.Run()
+//	if err != nil {
+//		panic(err)
+//	}
+//}
 
 //// Handler for Spark schema endpoint
 //func jsonsparkSchemaHandler(w http.ResponseWriter, r *http.Request) {

@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+message schema {
+  required string type = 1;
+  required string id = 2;
+  required string customerId = 3;
+  required string createdAt = 4;
+  required string updatedAt = 5;
+  required string name = 6;
+  optional int32 associationCount = 7;
+}

@@ -13,6 +13,16 @@ func ConvertInputSchemaToSparkSchema(SchemaType, path string) (SchemaResponse, e
 	var schema, sparkSchema map[string]interface{}
 	var originalSchema interface{}
 	var response SchemaResponse
+	if SchemaType == "PROTO" {
+		protoSchema, err := os.ReadFile(path)
+		if err != nil {
+			fmt.Println("Error reading XML file:", err)
+			return SchemaResponse{}, err
+		}
+		originalSchema = string(protoSchema)
+		generateJSONFromProto()
+		path = "inputSchemas/generatedByProto/schema.json"
+	}
 	originalSchemaBytes, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Println("Error reading XML file:", err)
@@ -38,6 +48,8 @@ func ConvertInputSchemaToSparkSchema(SchemaType, path string) (SchemaResponse, e
 
 	if SchemaType == "XML" {
 		schema = schema["root"].(map[string]interface{})
+	} else if SchemaType == "PROTO" {
+		schema = schema["definitions"].(map[string]interface{})["schema"].(map[string]interface{})
 	} else {
 		originalSchema = schema
 	}

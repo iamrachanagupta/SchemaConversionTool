@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"os/exec"
 )
 
 // SchemaResponse holds both the original JSON schema and the converted Spark schema
@@ -11,6 +12,15 @@ type SchemaResponse struct {
 	SchemaType     string      `json:"Schema_type"`
 	OriginalSchema interface{} `json:"original_schema"`
 	SparkSchema    interface{} `json:"spark_schema"`
+}
+
+func generateJSONFromProto() {
+	cmd := exec.Command("protoc", "--jsonschema_out=./inputSchemas/generatedByProto/",
+		"--proto_path=inputSchemas/", "inputSchemas/proto_schema.proto")
+	err := cmd.Run()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func SparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,6 +35,9 @@ func SparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
 	case "/spark-schema/xml":
 		schemaType = "XML"
 		path = "inputSchemas/xml_schema.xml"
+	case "/spark-schema/proto":
+		schemaType = "PROTO"
+		path = "inputSchemas/proto_schema.proto"
 	default:
 		http.Error(w, "Unsupported format", http.StatusNotFound)
 	}
