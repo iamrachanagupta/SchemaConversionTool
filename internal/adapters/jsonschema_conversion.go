@@ -30,6 +30,8 @@ func ConvertJSONSchemaToSparkSchema(jsonSchema map[string]interface{}) (map[stri
 		return nil, fmt.Errorf("failed to map properties in JSON schema")
 	}
 
+	requiredFields, _ := jsonSchema["required"].([]interface{})
+
 	for propName, propData := range properties {
 		field := make(map[string]interface{})
 		field["name"] = propName
@@ -45,7 +47,7 @@ func ConvertJSONSchemaToSparkSchema(jsonSchema map[string]interface{}) (map[stri
 		}
 
 		field["type"] = fieldType
-		field["nullable"] = !contains(jsonSchema["required"], propName)
+		field["nullable"] = !contains(requiredFields, propName)
 		field["metadata"] = make(map[string]interface{})
 
 		// Set all metadata fields dynamically
@@ -71,7 +73,7 @@ func ConvertJSONSchemaToSparkSchema(jsonSchema map[string]interface{}) (map[stri
 					field["type"] = map[string]interface{}{
 						"type":         ArrayType,
 						"elementType":  elementTypes,
-						"containsNull": true,
+						"containsNull": false,
 					}
 				}
 			}
@@ -92,13 +94,11 @@ func ConvertJSONSchemaToSparkSchema(jsonSchema map[string]interface{}) (map[stri
 	return sparkSchema, nil
 }
 
-// contains checks if a value is present in a slice.
-func contains(slice, item interface{}) bool {
-	if slice, ok := slice.([]string); ok {
-		for _, i := range slice {
-			if i == item {
-				return true
-			}
+// contains checks if a value is present in a slice of strings.
+func contains(slice []interface{}, item string) bool {
+	for _, i := range slice {
+		if str, ok := i.(string); ok && str == item {
+			return true
 		}
 	}
 	return false
