@@ -38,6 +38,9 @@ func SparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
 	case "/spark-schema/proto":
 		schemaType = "PROTO"
 		path = "inputSchemas/proto_schema.proto"
+	case "/spark-schema/custom":
+		schemaType = "CUSTOM"
+		path = "inputSchemas/custom_json_schema.json"
 	default:
 		http.Error(w, "Unsupported format", http.StatusNotFound)
 	}

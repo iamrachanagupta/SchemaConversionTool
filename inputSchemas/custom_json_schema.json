@@ -1,0 +1,17 @@
+{
+  "avg_watts": {
+    "type": "double",
+    "unit": "Watts",
+    "description": ""
+  },
+  "avg_reads": {
+    "type": "integer",
+    "unit": "iops",
+    "description": ""
+  },
+  "avg_writes": {
+    "type": "integer",
+    "unit": "iops",
+    "description": ""
+  }
+}

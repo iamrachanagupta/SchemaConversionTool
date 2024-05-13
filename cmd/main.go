@@ -12,6 +12,7 @@ func main() {
 	http.HandleFunc("/spark-schema/json", domain.SparkSchemaHandler)
 	http.HandleFunc("/spark-schema/xml", domain.SparkSchemaHandler)
 	http.HandleFunc("/spark-schema/proto", domain.SparkSchemaHandler)
+	http.HandleFunc("/spark-schema/custom", domain.SparkSchemaHandler)
 	http.Handle("/", http.FileServer(http.Dir("."))) // Serve static files (like the HTML file)
 	fmt.Println("Server running on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
