@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"os/exec"
@@ -18,7 +20,12 @@ func generateJSONFromProto() {
 	cmd := exec.Command("protoc", "--jsonschema_out=./inputSchemas/generatedByProto/",
 		"--proto_path=inputSchemas/", "inputSchemas/proto_schema.proto")
 	err := cmd.Run()
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
 	if err != nil {
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		panic(err)
 	}
 }
@@ -38,6 +45,9 @@ func SparkSchemaHandler(w http.ResponseWriter, r *http.Request) {
 	case "/spark-schema/proto":
 		schemaType = "PROTO"
 		path = "inputSchemas/proto_schema.proto"
+	case "/spark-schema/avro":
+		schemaType = "AVRO"
+		path = "inputSchemas/avro_schema.json"
 	case "/spark-schema/custom":
 		schemaType = "CUSTOM"
 		path = "inputSchemas/custom_json_schema.json"

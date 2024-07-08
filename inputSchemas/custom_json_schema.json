@@ -1,17 +1,88 @@
 {
-  "avg_watts": {
-    "type": "double",
-    "unit": "Watts",
-    "description": ""
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "readIops": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "unit",
+        "description"
+      ]
+    },
+    "writeIops": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "unit",
+        "description"
+      ]
+    },
+    "readLatency": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "unit",
+        "description"
+      ]
+    },
+    "writeThroughput": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "unit",
+        "description"
+      ]
+    }
   },
-  "avg_reads": {
-    "type": "integer",
-    "unit": "iops",
-    "description": ""
-  },
-  "avg_writes": {
-    "type": "integer",
-    "unit": "iops",
-    "description": ""
-  }
+  "required": [
+    "readIops",
+    "writeIops",
+    "readLatency",
+    "writeThroughput"
+  ]
 }

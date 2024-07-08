@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	xj "github.com/basgys/goxml2json"
+	"log"
 	"os"
 	"strings"
 )
@@ -13,6 +14,7 @@ func ConvertInputSchemaToSparkSchema(SchemaType, path string) (SchemaResponse, e
 	var schema, sparkSchema map[string]interface{}
 	var originalSchema interface{}
 	var response SchemaResponse
+
 	if SchemaType == "PROTO" {
 		protoSchema, err := os.ReadFile(path)
 		if err != nil {
@@ -20,6 +22,7 @@ func ConvertInputSchemaToSparkSchema(SchemaType, path string) (SchemaResponse, e
 			return SchemaResponse{}, err
 		}
 		originalSchema = string(protoSchema)
+
 		generateJSONFromProto()
 		path = "inputSchemas/generatedByProto/schema.json"
 	}
@@ -50,15 +53,24 @@ func ConvertInputSchemaToSparkSchema(SchemaType, path string) (SchemaResponse, e
 		schema = schema["root"].(map[string]interface{})
 	} else if SchemaType == "PROTO" {
 		schema = schema["definitions"].(map[string]interface{})["schema"].(map[string]interface{})
+	} else if SchemaType == "AVRO" {
+		originalSchema = string(originalSchemaBytes)
 	} else {
 		originalSchema = schema
 	}
 
-	// Simulated Spark schema data
-	sparkSchema, err = adapters.ConvertJSONSchemaToSparkSchema(schema)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return SchemaResponse{}, err
+	if SchemaType == "AVRO" {
+		sparkSchema, err = adapters.ConvertRecordSchema(schema)
+		if err != nil {
+			log.Fatalf("Failed to convert Avro schema to Spark schema: %v", err)
+		}
+	} else {
+		// Simulated Spark schema data
+		sparkSchema, err = adapters.ConvertJSONSchemaToSparkSchema(schema)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return SchemaResponse{}, err
+		}
 	}
 
 	// Create a response struct

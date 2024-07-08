@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "namespace": "com.hpe.harmony.dev",
+  "name": "mydataset",
+  "fields": [
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name": "age",
+      "type": "int"
+    }
+  ]
+}
